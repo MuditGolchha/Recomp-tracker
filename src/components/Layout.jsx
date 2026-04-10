@@ -7,6 +7,7 @@ import {
   Moon,
   TrendingUp,
   Users,
+  Share2,
   LogOut,
   Menu,
   X,
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
-const icons = { LayoutDashboard, Utensils, Dumbbell, Moon, TrendingUp, Users }
+const icons = { LayoutDashboard, Utensils, Dumbbell, Moon, TrendingUp, Share2, Users }
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: 'LayoutDashboard' },
@@ -22,6 +23,7 @@ const navItems = [
   { path: '/gym', label: 'Gym', icon: 'Dumbbell' },
   { path: '/sleep', label: 'Sleep', icon: 'Moon' },
   { path: '/progress', label: 'Progress', icon: 'TrendingUp' },
+  { path: '/share', label: 'Share', icon: 'Share2' },
   { path: '/coach-dashboard', label: 'Coach', icon: 'Users' },
 ]
 

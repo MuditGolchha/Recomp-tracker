@@ -50,6 +50,7 @@ function AppRoutes() {
         <Route path="/gym" element={<Gym />} />
         <Route path="/sleep" element={<Sleep />} />
         <Route path="/progress" element={<Progress />} />
+        <Route path="/share" element={<TrainerView />} />
         <Route path="/coach-dashboard" element={<CoachDashboard />} />
       </Route>
     </Routes>
