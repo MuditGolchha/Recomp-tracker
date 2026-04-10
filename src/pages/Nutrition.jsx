@@ -59,7 +59,7 @@ export default function Nutrition() {
     await supabase.from('food_log').insert({
       user_id: user.id,
       food_id: food.id || null,
-      custom_name: food.id ? null : food.name,
+      custom_name: food.name,
       meal_type: selectedMeal,
       servings,
       calories: food.calories_per_serving ? food.calories_per_serving * servings : Number(food.calories),

@@ -8,6 +8,7 @@ import Gym from './pages/Gym'
 import Sleep from './pages/Sleep'
 import Progress from './pages/Progress'
 import TrainerView from './pages/TrainerView'
+import CoachDashboard from './pages/CoachDashboard'
 import { Loader2 } from 'lucide-react'
 
 function ProtectedRoute({ children }) {
@@ -49,6 +50,7 @@ function AppRoutes() {
         <Route path="/gym" element={<Gym />} />
         <Route path="/sleep" element={<Sleep />} />
         <Route path="/progress" element={<Progress />} />
+        <Route path="/coach-dashboard" element={<CoachDashboard />} />
       </Route>
     </Routes>
   )
