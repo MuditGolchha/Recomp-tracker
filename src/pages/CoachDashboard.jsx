@@ -29,12 +29,23 @@ export default function CoachDashboard() {
   }, [user])
 
   async function loadClients() {
-    const { data } = await supabase
+    const { data: links } = await supabase
       .from('coach_clients')
-      .select('*, profiles:client_id(full_name, target_calories, target_protein_g, target_carbs_g, target_fat_g)')
+      .select('*')
       .eq('coach_id', user.id)
       .eq('status', 'active')
-    setClients(data || [])
+    if (!links || links.length === 0) { setClients([]); return }
+
+    const clientIds = links.map(l => l.client_id)
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, target_calories, target_protein_g, target_carbs_g, target_fat_g')
+      .in('id', clientIds)
+
+    const profileMap = {}
+    ;(profiles || []).forEach(p => { profileMap[p.id] = p })
+
+    setClients(links.map(l => ({ ...l, profiles: profileMap[l.client_id] || null })))
   }
 
   async function addClient() {
