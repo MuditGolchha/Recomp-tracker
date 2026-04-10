@@ -72,10 +72,32 @@ export default function CoachDashboard() {
     setSelectedClient(clientId)
     setLoadingClient(true)
     setActiveTab('overview')
+    setClientData(null)
     const { data, error } = await supabase.rpc('get_client_data', {
       client_user_id: clientId
     })
-    if (!error) setClientData(data)
+    if (!error && data && !data.error) {
+      setClientData(data)
+    } else {
+      // Fallback: load data directly
+      const [profileRes, foodRes, workoutRes, sleepRes, progressRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', clientId).single(),
+        supabase.from('food_log').select('*').eq('user_id', clientId).gte('logged_at', new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]).order('logged_at', { ascending: false }),
+        supabase.from('workout_sessions').select('*').eq('user_id', clientId).gte('workout_date', new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]).order('workout_date', { ascending: false }),
+        supabase.from('sleep_log').select('*').eq('user_id', clientId).gte('sleep_date', new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]).order('sleep_date', { ascending: false }),
+        supabase.from('weekly_progress').select('*').eq('user_id', clientId).order('recorded_date', { ascending: false }),
+      ])
+      setClientData({
+        profile: profileRes.data || {},
+        food_log_7d: foodRes.data || [],
+        food_log_30d_summary: [],
+        workouts: workoutRes.data || [],
+        workout_sets: [],
+        sleep: sleepRes.data || [],
+        progress: progressRes.data || [],
+        coach_notes: [],
+      })
+    }
     setLoadingClient(false)
   }
 
@@ -595,14 +617,15 @@ export default function CoachDashboard() {
               </button>
             </div>
             <p className="text-sm text-gray-400 mb-4">
-              Ask your client to go to the <strong>Trainer</strong> page in their app and share their code with you.
+              Ask your client to go to the <strong className="text-gray-300">Share</strong> tab in their app and give you their 6-digit code.
             </p>
             <input
               type="text"
               value={shareToken}
-              onChange={(e) => setShareToken(e.target.value)}
-              placeholder="Paste client's share token..."
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-4 font-mono text-sm"
+              onChange={(e) => setShareToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="Enter 6-digit code"
+              maxLength={6}
+              className="w-full px-4 py-4 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-4 font-mono text-3xl text-center tracking-[0.3em]"
               autoFocus
             />
 
