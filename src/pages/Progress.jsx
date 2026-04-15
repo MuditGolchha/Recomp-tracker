@@ -6,7 +6,7 @@ import { Plus, Camera, Scale, Ruler, Trash2 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 export default function Progress() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [entries, setEntries] = useState([])
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({
@@ -33,7 +33,7 @@ export default function Progress() {
 
   async function saveProgress(e) {
     e.preventDefault()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('weekly_progress')
       .insert({
         user_id: user.id,
@@ -46,6 +46,11 @@ export default function Progress() {
       .select()
       .single()
 
+    if (error || !data) {
+      console.error('Failed to save progress:', error?.message)
+      return
+    }
+
     // Upload photos if any
     for (const photo of photos) {
       const ext = photo.name.split('.').pop()
@@ -55,14 +60,14 @@ export default function Progress() {
         .upload(path, photo)
 
       if (!uploadError) {
-        const { data: { publicUrl } } = supabase.storage
+        const { data: urlData } = supabase.storage
           .from('progress-photos')
           .getPublicUrl(path)
 
         await supabase.from('progress_photos').insert({
           user_id: user.id,
           progress_id: data.id,
-          photo_url: publicUrl,
+          photo_url: urlData.publicUrl,
           photo_type: 'front',
           taken_at: form.recorded_date,
         })
@@ -91,8 +96,8 @@ export default function Progress() {
   }))
 
   const latestWeight = entries.find(e => e.weight_kg)?.weight_kg
-  const startWeight = 60.0
-  const weightChange = latestWeight ? (latestWeight - startWeight).toFixed(1) : null
+  const startWeight = profile?.start_weight_kg || entries[entries.length - 1]?.weight_kg || null
+  const weightChange = latestWeight && startWeight ? (latestWeight - startWeight).toFixed(1) : null
 
   return (
     <div>

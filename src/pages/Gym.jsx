@@ -59,11 +59,12 @@ export default function Gym() {
   }
 
   async function startSession() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('workout_sessions')
       .insert({ user_id: user.id, name: sessionName || 'Workout', workout_date: format(new Date(), 'yyyy-MM-dd') })
       .select()
       .single()
+    if (error || !data) return
     setActiveSession(data)
     setSets([])
     setShowNewSession(false)
@@ -88,7 +89,7 @@ export default function Gym() {
   async function addSet() {
     if (!activeSession || !newSet.exercise_name) return
     const setNumber = sets.filter(s => s.exercise_name === newSet.exercise_name).length + 1
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('workout_sets')
       .insert({
         session_id: activeSession.id,
@@ -100,6 +101,7 @@ export default function Gym() {
       })
       .select()
       .single()
+    if (error || !data) return
     setSets([...sets, data])
     setNewSet({ ...newSet, reps: '', weight_kg: '', rpe: '' })
   }

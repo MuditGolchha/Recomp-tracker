@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import Layout from './components/Layout'
 import AuthForm from './components/AuthForm'
+import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
 import Nutrition from './pages/Nutrition'
 import Gym from './pages/Gym'
@@ -12,7 +13,7 @@ import CoachDashboard from './pages/CoachDashboard'
 import { Loader2 } from 'lucide-react'
 
 function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth()
+  const { user, loading, needsOnboarding } = useAuth()
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
@@ -20,11 +21,13 @@ function ProtectedRoute({ children }) {
       </div>
     )
   }
-  return user ? children : <Navigate to="/login" />
+  if (!user) return <Navigate to="/login" />
+  if (needsOnboarding) return <Navigate to="/onboarding" />
+  return children
 }
 
 function AppRoutes() {
-  const { user, loading } = useAuth()
+  const { user, loading, needsOnboarding } = useAuth()
 
   if (loading) {
     return (
@@ -36,7 +39,8 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" /> : <AuthForm />} />
+      <Route path="/login" element={user ? (needsOnboarding ? <Navigate to="/onboarding" /> : <Navigate to="/" />) : <AuthForm />} />
+      <Route path="/onboarding" element={user ? (needsOnboarding ? <Onboarding /> : <Navigate to="/" />) : <Navigate to="/login" />} />
       <Route path="/trainer" element={<TrainerView />} />
       <Route
         element={

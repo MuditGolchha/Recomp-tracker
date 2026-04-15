@@ -28,12 +28,22 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function fetchProfile(userId) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    setProfile(data)
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+      if (error) {
+        console.error('Profile fetch error:', error.message)
+        setProfile(null)
+      } else {
+        setProfile(data)
+      }
+    } catch (err) {
+      console.error('Profile fetch exception:', err)
+      setProfile(null)
+    }
     setLoading(false)
   }
 
@@ -60,8 +70,10 @@ export function AuthProvider({ children }) {
     setProfile(null)
   }
 
+  const needsOnboarding = user && profile && !profile.onboarding_completed
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, signOut, fetchProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, needsOnboarding, signUp, signIn, signOut, fetchProfile }}>
       {children}
     </AuthContext.Provider>
   )

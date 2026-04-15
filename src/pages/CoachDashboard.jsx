@@ -5,8 +5,9 @@ import { format, parseISO } from 'date-fns'
 import {
   Users, Plus, UserPlus, ArrowLeft, Utensils, Dumbbell, Moon, Scale,
   TrendingDown, Trash2, StickyNote, Send, ChevronRight, AlertCircle,
-  CheckCircle, XCircle, X
+  CheckCircle, XCircle, X, Play
 } from 'lucide-react'
+import CoachWorkout from '../components/CoachWorkout'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine
@@ -189,6 +190,7 @@ export default function CoachDashboard() {
 
     const tabs = [
       { id: 'overview', label: 'Overview' },
+      { id: 'live-workout', label: 'Live Workout', icon: Play },
       { id: 'nutrition', label: 'Nutrition' },
       { id: 'workouts', label: 'Workouts' },
       { id: 'sleep', label: 'Sleep' },
@@ -324,6 +326,15 @@ export default function CoachDashboard() {
               </div>
             )}
           </div>
+        )}
+
+        {/* LIVE WORKOUT TAB */}
+        {activeTab === 'live-workout' && (
+          <CoachWorkout
+            clientId={selectedClient}
+            clientName={profile.full_name || 'Client'}
+            coachId={user.id}
+          />
         )}
 
         {/* NUTRITION TAB */}

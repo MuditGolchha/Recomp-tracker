@@ -26,7 +26,8 @@ export default function Dashboard() {
     fat: profile?.target_fat_g || USER_DEFAULTS.target_fat_g,
   }
 
-  const daysLeft = differenceInDays(new Date('2026-06-09'), new Date())
+  const deadlineDate = profile?.deadline ? new Date(profile.deadline) : new Date('2026-06-09')
+  const daysLeft = differenceInDays(deadlineDate, new Date())
 
   useEffect(() => {
     if (!user) return
@@ -209,8 +210,8 @@ export default function Dashboard() {
             <Calendar className="w-4 h-4" />
             Deadline
           </h3>
-          <div className="text-2xl font-bold text-emerald-400">{daysLeft}</div>
-          <div className="text-sm text-gray-500">days until June 9</div>
+          <div className="text-2xl font-bold text-emerald-400">{daysLeft > 0 ? daysLeft : 0}</div>
+          <div className="text-sm text-gray-500">days until {format(deadlineDate, 'MMM d')}</div>
           <div className="mt-2 w-full bg-gray-800 rounded-full h-2">
             <div
               className="bg-emerald-500 h-2 rounded-full transition-all"

@@ -17,19 +17,27 @@ import { useState } from 'react'
 
 const icons = { LayoutDashboard, Utensils, Dumbbell, Moon, TrendingUp, Share2, Users }
 
-const navItems = [
+const baseNavItems = [
   { path: '/', label: 'Dashboard', icon: 'LayoutDashboard' },
   { path: '/nutrition', label: 'Nutrition', icon: 'Utensils' },
   { path: '/gym', label: 'Gym', icon: 'Dumbbell' },
   { path: '/sleep', label: 'Sleep', icon: 'Moon' },
   { path: '/progress', label: 'Progress', icon: 'TrendingUp' },
   { path: '/share', label: 'Share', icon: 'Share2' },
-  { path: '/coach-dashboard', label: 'Coach', icon: 'Users' },
 ]
 
 export default function Layout() {
-  const { user, signOut } = useAuth()
+  const { user, profile, signOut } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Only show Coach tab if user is a coach
+  const navItems = profile?.is_coach
+    ? [...baseNavItems, { path: '/coach-dashboard', label: 'Coach', icon: 'Users' }]
+    : baseNavItems
+
+  const goalText = profile?.goal
+    ? profile.goal.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    : 'Track your journey'
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -56,7 +64,7 @@ export default function Layout() {
               <Target className="w-7 h-7 text-emerald-400" />
               <span className="font-bold text-xl">RecompTracker</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Abs by June 9 🎯</p>
+            <p className="text-xs text-gray-500 mt-1">{goalText}</p>
           </div>
 
           <nav className="px-3 mt-4 lg:mt-0">
@@ -83,7 +91,7 @@ export default function Layout() {
           </nav>
 
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
-            <div className="text-xs text-gray-500 mb-2">{user?.email}</div>
+            <div className="text-xs text-gray-500 mb-2 truncate">{user?.email}</div>
             <button
               onClick={signOut}
               className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors"
