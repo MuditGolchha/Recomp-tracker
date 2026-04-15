@@ -13,10 +13,11 @@ import {
   Menu,
   X,
   Target,
+  ClipboardList,
 } from 'lucide-react'
 import { useState } from 'react'
 
-const icons = { LayoutDashboard, Utensils, Dumbbell, Moon, TrendingUp, Share2, Users }
+const icons = { LayoutDashboard, Utensils, Dumbbell, Moon, TrendingUp, Share2, Users, ClipboardList }
 
 const baseNavItems = [
   { path: '/', label: 'Dashboard', icon: 'LayoutDashboard' },
@@ -24,6 +25,7 @@ const baseNavItems = [
   { path: '/gym', label: 'Gym', icon: 'Dumbbell' },
   { path: '/sleep', label: 'Sleep', icon: 'Moon' },
   { path: '/progress', label: 'Progress', icon: 'TrendingUp' },
+  { path: '/my-plan', label: 'My Plan', icon: 'ClipboardList' },
   { path: '/share', label: 'Share', icon: 'Share2' },
 ]
 

@@ -8,7 +8,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, AreaChart, Area,
 } from 'recharts'
-import { Target, Flame, Zap, Moon, Dumbbell, TrendingDown, Calendar } from 'lucide-react'
+import { Target, Flame, Zap, Moon, Dumbbell, TrendingDown, Calendar, Users } from 'lucide-react'
 
 export default function Dashboard() {
   const { user, profile } = useAuth()
@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [proteinData, setProteinData] = useState([])
   const [recentWorkouts, setRecentWorkouts] = useState([])
   const [lastSleep, setLastSleep] = useState(null)
+  const [coachName, setCoachName] = useState(null)
   const today = format(new Date(), 'yyyy-MM-dd')
 
   const targets = {
@@ -32,7 +33,27 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) return
     loadDashboard()
+    loadCoach()
   }, [user])
+
+  async function loadCoach() {
+    // Find if this user has a coach
+    const { data: link } = await supabase
+      .from('coach_clients')
+      .select('coach_id')
+      .eq('client_id', user.id)
+      .eq('status', 'active')
+      .limit(1)
+      .single()
+    if (link) {
+      const { data: coachProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', link.coach_id)
+        .single()
+      if (coachProfile) setCoachName(coachProfile.full_name)
+    }
+  }
 
   async function loadDashboard() {
     const [foodRes, weightRes, proteinRes, workoutRes, sleepRes] = await Promise.all([
@@ -80,7 +101,14 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-white">
             Hey {profile?.full_name || 'Mudit'} 👋
           </h1>
-          <p className="text-gray-400 mt-1">{format(new Date(), 'EEEE, MMMM d')}</p>
+          <p className="text-gray-400 mt-1">
+            {format(new Date(), 'EEEE, MMMM d')}
+            {coachName && (
+              <span className="ml-2 inline-flex items-center gap-1 text-emerald-400">
+                <Users className="w-3.5 h-3.5 inline" /> Coach: {coachName}
+              </span>
+            )}
+          </p>
         </div>
         <div className="mt-3 sm:mt-0 flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/20">
           <Target className="w-4 h-4 text-emerald-400" />

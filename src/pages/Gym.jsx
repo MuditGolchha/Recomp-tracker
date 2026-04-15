@@ -128,7 +128,7 @@ export default function Gym() {
   useEffect(() => {
     if (exerciseSearch.length >= 1) {
       setFilteredExercises(
-        exercises.filter(e => e.name.toLowerCase().includes(exerciseSearch.toLowerCase())).slice(0, 8)
+        exercises.filter(e => e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) && e.name.toLowerCase() !== exerciseSearch.toLowerCase()).slice(0, 8)
       )
     } else {
       setFilteredExercises([])

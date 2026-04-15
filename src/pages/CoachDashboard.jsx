@@ -102,12 +102,24 @@ export default function CoachDashboard() {
 
   async function markAttendance(clientId, status) {
     const today = format(new Date(), 'yyyy-MM-dd')
-    await supabase.from('attendance').upsert({
-      coach_id: user.id,
-      client_id: clientId,
-      date: today,
-      status,
-    }, { onConflict: 'coach_id,client_id,date' })
+    const { data: existing } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('coach_id', user.id)
+      .eq('client_id', clientId)
+      .eq('date', today)
+      .maybeSingle()
+
+    if (existing) {
+      await supabase.from('attendance').update({ status }).eq('id', existing.id)
+    } else {
+      await supabase.from('attendance').insert({
+        coach_id: user.id,
+        client_id: clientId,
+        date: today,
+        status,
+      })
+    }
     loadClients()
   }
 
@@ -824,7 +836,7 @@ function PlanTab({ clientId, clientName, coachId }) {
   }
 
   const filteredEx = exSearch.length >= 1
-    ? exercises.filter(e => e.name.toLowerCase().includes(exSearch.toLowerCase())).slice(0, 6)
+    ? exercises.filter(e => e.name.toLowerCase().includes(exSearch.toLowerCase()) && e.name.toLowerCase() !== exSearch.toLowerCase()).slice(0, 6)
     : []
 
   // Plan detail view
@@ -1053,12 +1065,25 @@ function AttendanceTab({ clientId, coachId }) {
   }
 
   async function markDay(date, status) {
-    await supabase.from('attendance').upsert({
-      coach_id: coachId,
-      client_id: clientId,
-      date,
-      status,
-    }, { onConflict: 'coach_id,client_id,date' })
+    // Check if record exists already
+    const { data: existing } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('coach_id', coachId)
+      .eq('client_id', clientId)
+      .eq('date', date)
+      .maybeSingle()
+
+    if (existing) {
+      await supabase.from('attendance').update({ status }).eq('id', existing.id)
+    } else {
+      await supabase.from('attendance').insert({
+        coach_id: coachId,
+        client_id: clientId,
+        date,
+        status,
+      })
+    }
     loadAttendance()
   }
 

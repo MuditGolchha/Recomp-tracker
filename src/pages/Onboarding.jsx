@@ -98,6 +98,23 @@ export default function Onboarding() {
     return { calories, proteinG, carbsG, fatG }
   }
 
+  // Quick finish for coaches — skip body stats entirely
+  async function finishCoach() {
+    setSaving(true)
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        is_coach: true,
+        onboarding_completed: true,
+      })
+      .eq('id', user.id)
+
+    if (!error) {
+      await fetchProfile(user.id)
+    }
+    setSaving(false)
+  }
+
   async function finish() {
     setSaving(true)
     const targets = calcTargets()
@@ -365,7 +382,14 @@ export default function Onboarding() {
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
           )}
-          {step < totalSteps - 1 ? (
+          {/* Coach shortcut: skip all body stats and go straight to dashboard */}
+          {step === 0 && data.is_coach ? (
+            <button onClick={finishCoach} disabled={saving}
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-xl transition-colors text-sm font-medium">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />}
+              {saving ? 'Setting up...' : 'Go to Coach Dashboard'}
+            </button>
+          ) : step < totalSteps - 1 ? (
             <button onClick={() => setStep(step + 1)}
               disabled={step === 0 && !data.goal}
               className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-xl transition-colors text-sm font-medium">
