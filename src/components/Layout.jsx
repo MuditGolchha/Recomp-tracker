@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import NotificationBell from './NotificationBell'
 import {
   LayoutDashboard,
   Utensils,
@@ -47,9 +48,12 @@ export default function Layout() {
           <Target className="w-6 h-6 text-emerald-400" />
           <span className="font-bold text-lg">RecompTracker</span>
         </div>
-        <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2">
-          {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2">
+            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       <div className="flex">
@@ -91,7 +95,10 @@ export default function Layout() {
           </nav>
 
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
-            <div className="text-xs text-gray-500 mb-2 truncate">{user?.email}</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-gray-500 truncate">{user?.email}</div>
+              <div className="hidden lg:block"><NotificationBell /></div>
+            </div>
             <button
               onClick={signOut}
               className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors"
