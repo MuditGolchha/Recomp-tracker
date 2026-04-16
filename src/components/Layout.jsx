@@ -19,7 +19,7 @@ import { useState } from 'react'
 
 const icons = { LayoutDashboard, Utensils, Dumbbell, Moon, TrendingUp, Share2, Users, ClipboardList }
 
-const baseNavItems = [
+const clientNavItems = [
   { path: '/', label: 'Dashboard', icon: 'LayoutDashboard' },
   { path: '/nutrition', label: 'Nutrition', icon: 'Utensils' },
   { path: '/gym', label: 'Gym', icon: 'Dumbbell' },
@@ -29,18 +29,23 @@ const baseNavItems = [
   { path: '/share', label: 'Share', icon: 'Share2' },
 ]
 
+const coachNavItems = [
+  { path: '/coach-dashboard', label: 'My Clients', icon: 'Users' },
+  { path: '/share', label: 'My Code', icon: 'Share2' },
+]
+
 export default function Layout() {
   const { user, profile, signOut } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Only show Coach tab if user is a coach
-  const navItems = profile?.is_coach
-    ? [...baseNavItems, { path: '/coach-dashboard', label: 'Coach', icon: 'Users' }]
-    : baseNavItems
+  // Coaches see a stripped-down nav — just clients + their share code
+  const navItems = profile?.is_coach ? coachNavItems : clientNavItems
 
-  const goalText = profile?.goal
-    ? profile.goal.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-    : 'Track your journey'
+  const goalText = profile?.is_coach
+    ? 'Coach Dashboard'
+    : profile?.goal
+      ? profile.goal.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      : 'Track your journey'
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -97,10 +102,7 @@ export default function Layout() {
           </nav>
 
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-xs text-gray-500 truncate">{user?.email}</div>
-              <div className="hidden lg:block"><NotificationBell /></div>
-            </div>
+            <div className="text-xs text-gray-500 truncate mb-2">{user?.email}</div>
             <button
               onClick={signOut}
               className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors"
@@ -121,7 +123,11 @@ export default function Layout() {
 
         {/* Main content */}
         <main className="flex-1 min-h-screen lg:ml-0">
-          <div className="max-w-6xl mx-auto p-4 lg:p-8">
+          {/* Desktop top bar with notification bell */}
+          <div className="hidden lg:flex items-center justify-end px-8 pt-6">
+            <NotificationBell />
+          </div>
+          <div className="max-w-6xl mx-auto p-4 lg:p-8 lg:pt-2">
             <Outlet />
           </div>
         </main>

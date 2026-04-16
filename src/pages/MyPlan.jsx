@@ -28,43 +28,41 @@ export default function MyPlan() {
   async function loadData() {
     setLoading(true)
 
-    // Get coach link
+    // Get coach link (may not exist)
     const { data: link } = await supabase
       .from('coach_clients')
       .select('coach_id')
       .eq('client_id', user.id)
       .eq('status', 'active')
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (!link) {
-      setLoading(false)
-      return
+    // Get coach name if linked
+    if (link?.coach_id) {
+      const { data: coachProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', link.coach_id)
+        .maybeSingle()
+      if (coachProfile) setCoachName(coachProfile.full_name || 'Your Coach')
     }
 
-    // Get coach name
-    const { data: coachProfile } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', link.coach_id)
-      .single()
-    if (coachProfile) setCoachName(coachProfile.full_name)
-
-    // Get active programs assigned to me
-    const { data: progs } = await supabase
+    // Get ALL programs where this user is the client
+    const { data: progs, error: progErr } = await supabase
       .from('workout_programs')
       .select('*')
       .eq('client_id', user.id)
       .order('created_at', { ascending: false })
 
+    if (progErr) console.error('program load err', progErr)
     setPrograms(progs || [])
 
-    // Auto-select active program
+    // Load ALL planned workouts for this user (with or without program)
+    await loadAllWorkouts()
+
+    // Auto-select active program for the program dropdown
     const active = (progs || []).find(p => p.status === 'active')
-    if (active) {
-      setSelectedProgram(active)
-      await loadWorkouts(active.id)
-    }
+    if (active) setSelectedProgram(active)
 
     // Load today's attendance
     const today = format(new Date(), 'yyyy-MM-dd')
@@ -72,7 +70,7 @@ export default function MyPlan() {
       .from('attendance')
       .select('*')
       .eq('client_id', user.id)
-      .gte('date', format(addDays(new Date(), -7), 'yyyy-MM-dd'))
+      .gte('date', format(addDays(new Date(), -30), 'yyyy-MM-dd'))
       .lte('date', today)
     const attMap = {}
     ;(att || []).forEach(a => { attMap[a.date] = a })
@@ -91,7 +89,35 @@ export default function MyPlan() {
     setLoading(false)
   }
 
+  async function loadAllWorkouts() {
+    const { data: wks, error } = await supabase
+      .from('planned_workouts')
+      .select('*')
+      .eq('client_id', user.id)
+      .order('scheduled_date')
+
+    if (error) console.error('planned workouts err', error)
+    setWorkouts(wks || [])
+
+    // Load exercises for all workouts
+    const ids = (wks || []).map(w => w.id)
+    if (ids.length > 0) {
+      const { data: exs } = await supabase
+        .from('planned_exercises')
+        .select('*')
+        .in('planned_workout_id', ids)
+        .order('sort_order')
+      const exMap = {}
+      ;(exs || []).forEach(e => {
+        if (!exMap[e.planned_workout_id]) exMap[e.planned_workout_id] = []
+        exMap[e.planned_workout_id].push(e)
+      })
+      setExercises(exMap)
+    }
+  }
+
   async function loadWorkouts(programId) {
+    // Used by dropdown filter: load workouts for one program only
     const { data: wks } = await supabase
       .from('planned_workouts')
       .select('*')
@@ -99,8 +125,6 @@ export default function MyPlan() {
       .order('scheduled_date')
 
     setWorkouts(wks || [])
-
-    // Load exercises for all workouts
     const ids = (wks || []).map(w => w.id)
     if (ids.length > 0) {
       const { data: exs } = await supabase
@@ -220,7 +244,7 @@ export default function MyPlan() {
     )
   }
 
-  if (programs.length === 0) {
+  if (programs.length === 0 && workouts.length === 0) {
     return (
       <div>
         <h1 className="text-2xl font-bold text-white mb-4">My Plan</h1>
@@ -229,8 +253,8 @@ export default function MyPlan() {
           <h2 className="text-lg font-medium text-gray-400 mb-1">No workout plan yet</h2>
           <p className="text-sm text-gray-600">
             {coachName
-              ? `Your coach ${coachName} hasn't assigned a program yet. Check back soon!`
-              : 'Connect with a coach to get a personalized workout plan.'}
+              ? `${coachName} hasn't assigned a workout yet. Check back soon!`
+              : 'Connect with a coach via your share code to get a personalized workout plan.'}
           </p>
         </div>
       </div>

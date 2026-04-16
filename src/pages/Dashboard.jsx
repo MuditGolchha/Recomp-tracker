@@ -38,20 +38,22 @@ export default function Dashboard() {
 
   async function loadCoach() {
     // Find if this user has a coach
-    const { data: link } = await supabase
+    const { data: link, error: linkErr } = await supabase
       .from('coach_clients')
       .select('coach_id')
       .eq('client_id', user.id)
       .eq('status', 'active')
       .limit(1)
-      .single()
-    if (link) {
-      const { data: coachProfile } = await supabase
+      .maybeSingle()
+    if (linkErr) console.error('coach link err', linkErr)
+    if (link?.coach_id) {
+      const { data: coachProfile, error: profErr } = await supabase
         .from('profiles')
         .select('full_name')
         .eq('id', link.coach_id)
-        .single()
-      if (coachProfile) setCoachName(coachProfile.full_name)
+        .maybeSingle()
+      if (profErr) console.error('coach profile err', profErr)
+      if (coachProfile) setCoachName(coachProfile.full_name || 'Your Coach')
     }
   }
 
@@ -101,14 +103,13 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-white">
             Hey {profile?.full_name || 'Mudit'} 👋
           </h1>
-          <p className="text-gray-400 mt-1">
-            {format(new Date(), 'EEEE, MMMM d')}
-            {coachName && (
-              <span className="ml-2 inline-flex items-center gap-1 text-emerald-400">
-                <Users className="w-3.5 h-3.5 inline" /> Coach: {coachName}
-              </span>
-            )}
-          </p>
+          <p className="text-gray-400 mt-1">{format(new Date(), 'EEEE, MMMM d')}</p>
+          {coachName && (
+            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 rounded-full border border-purple-500/30">
+              <Users className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-xs text-purple-400 font-medium">Your Coach: {coachName}</span>
+            </div>
+          )}
         </div>
         <div className="mt-3 sm:mt-0 flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/20">
           <Target className="w-4 h-4 text-emerald-400" />

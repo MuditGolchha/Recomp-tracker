@@ -6,12 +6,13 @@ import {
   Users, UserPlus, ArrowLeft, ChevronRight, X, CheckCircle, XCircle,
   Dumbbell, CreditCard, CalendarCheck, TrendingUp, ClipboardList,
   Bell, StickyNote, Send, Trash2, Plus, Calendar, Check, AlertTriangle,
-  Clock, ChevronDown, ChevronUp, Search, Edit3, Save
+  Clock, ChevronDown, ChevronUp, Search, Edit3, Save, Play
 } from 'lucide-react'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine
 } from 'recharts'
+import LiveCoachSession from '../components/LiveCoachSession'
 
 export default function CoachDashboard() {
   const { user } = useAuth()
@@ -299,6 +300,7 @@ export default function CoachDashboard() {
 // CLIENT VIEW - Full tabbed interface
 // =============================================
 function ClientView({ client, profile, coachId, onBack, activeTab, setActiveTab }) {
+  const [liveOpen, setLiveOpen] = useState(false)
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Users },
     { id: 'workouts', label: 'Workouts', icon: Dumbbell },
@@ -311,18 +313,35 @@ function ClientView({ client, profile, coachId, onBack, activeTab, setActiveTab 
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={onBack} className="p-2 hover:bg-gray-800 rounded-lg transition-colors">
+      <div className="flex items-start gap-3 mb-6">
+        <button onClick={onBack} className="p-2 hover:bg-gray-800 rounded-lg transition-colors shrink-0">
           <ArrowLeft className="w-5 h-5 text-gray-400" />
         </button>
-        <div>
-          <h1 className="text-2xl font-bold text-white">{profile?.full_name || 'Client'}</h1>
-          <p className="text-sm text-gray-500">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-white truncate">{profile?.full_name || 'Client'}</h1>
+          <p className="text-xs sm:text-sm text-gray-500 truncate">
             {profile?.goal?.replace(/_/g, ' ') || 'No goal'}
             {profile?.target_calories && ` · ${profile.target_calories} kcal · ${profile.target_protein_g}g protein`}
           </p>
         </div>
+        <button
+          onClick={() => setLiveOpen(true)}
+          className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium text-sm shadow-lg shadow-emerald-500/20 shrink-0"
+        >
+          <Play className="w-4 h-4" />
+          <span className="hidden sm:inline">Start Live Session</span>
+          <span className="sm:hidden">Start</span>
+        </button>
       </div>
+
+      {liveOpen && (
+        <LiveCoachSession
+          clientId={client.client_id}
+          clientName={profile?.full_name || 'Client'}
+          coachId={coachId}
+          onClose={() => setLiveOpen(false)}
+        />
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 overflow-x-auto pb-2 -mx-1 px-1">
@@ -601,8 +620,13 @@ function WorkoutsTab({ clientId, coachId }) {
 // =============================================
 function ProgressTab({ clientId, profile }) {
   const [entries, setEntries] = useState([])
+  const [strengthData, setStrengthData] = useState({})
+  const [selectedExercise, setSelectedExercise] = useState('')
 
-  useEffect(() => { loadProgress() }, [clientId])
+  useEffect(() => {
+    loadProgress()
+    loadStrength()
+  }, [clientId])
 
   async function loadProgress() {
     const { data } = await supabase
@@ -611,6 +635,51 @@ function ProgressTab({ clientId, profile }) {
       .eq('user_id', clientId)
       .order('recorded_date', { ascending: false })
     setEntries(data || [])
+  }
+
+  async function loadStrength() {
+    // Get this client's workout sessions
+    const { data: sessions } = await supabase
+      .from('workout_sessions')
+      .select('id, workout_date')
+      .eq('user_id', clientId)
+      .order('workout_date')
+    if (!sessions || sessions.length === 0) return
+
+    const sessionMap = {}
+    sessions.forEach(s => { sessionMap[s.id] = s.workout_date })
+
+    const { data: sets } = await supabase
+      .from('workout_sets')
+      .select('session_id, exercise_name, reps, weight_kg')
+      .in('session_id', sessions.map(s => s.id))
+    if (!sets || sets.length === 0) return
+
+    // Group by exercise, take the top working set per date (max weight × reps)
+    const byEx = {}
+    sets.forEach(set => {
+      if (!set.weight_kg || !set.reps) return
+      const date = sessionMap[set.session_id]
+      if (!date) return
+      const key = set.exercise_name
+      if (!byEx[key]) byEx[key] = {}
+      // Estimated 1RM: weight × (1 + reps/30) (Epley)
+      const e1rm = Number(set.weight_kg) * (1 + Number(set.reps) / 30)
+      if (!byEx[key][date] || e1rm > byEx[key][date].e1rm) {
+        byEx[key][date] = { e1rm, weight: Number(set.weight_kg), reps: Number(set.reps) }
+      }
+    })
+
+    // Transform to { exerciseName: [{date, weight, e1rm}] }
+    const result = {}
+    Object.entries(byEx).forEach(([ex, dates]) => {
+      result[ex] = Object.entries(dates)
+        .map(([date, v]) => ({ date: date.slice(5), weight: v.weight, e1rm: Math.round(v.e1rm * 10) / 10, reps: v.reps }))
+        .sort((a, b) => a.date.localeCompare(b.date))
+    })
+    setStrengthData(result)
+    const exNames = Object.keys(result)
+    if (exNames.length > 0 && !selectedExercise) setSelectedExercise(exNames[0])
   }
 
   const weightChart = [...entries].reverse().filter(e => e.weight_kg).map(e => ({
@@ -673,6 +742,58 @@ function ProgressTab({ clientId, profile }) {
               <Line type="monotone" dataKey="waist" stroke="#a855f7" strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Strength Progress */}
+      {Object.keys(strengthData).length > 0 && (
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-400">Strength Progress</h3>
+            <select
+              value={selectedExercise}
+              onChange={(e) => setSelectedExercise(e.target.value)}
+              className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              {Object.keys(strengthData).map(ex => (
+                <option key={ex} value={ex}>{ex}</option>
+              ))}
+            </select>
+          </div>
+          {selectedExercise && strengthData[selectedExercise]?.length > 0 && (
+            <>
+              <div className="grid grid-cols-3 gap-2 mb-3 text-center">
+                <div className="p-2 bg-gray-800/50 rounded-lg">
+                  <div className="text-xs text-gray-500">Top Weight</div>
+                  <div className="text-lg font-semibold text-emerald-400">
+                    {Math.max(...strengthData[selectedExercise].map(d => d.weight))} kg
+                  </div>
+                </div>
+                <div className="p-2 bg-gray-800/50 rounded-lg">
+                  <div className="text-xs text-gray-500">Est. 1RM</div>
+                  <div className="text-lg font-semibold text-blue-400">
+                    {Math.max(...strengthData[selectedExercise].map(d => d.e1rm))} kg
+                  </div>
+                </div>
+                <div className="p-2 bg-gray-800/50 rounded-lg">
+                  <div className="text-xs text-gray-500">Sessions</div>
+                  <div className="text-lg font-semibold text-white">
+                    {strengthData[selectedExercise].length}
+                  </div>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={strengthData[selectedExercise]}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                  <XAxis dataKey="date" stroke="#6b7280" fontSize={11} />
+                  <YAxis stroke="#6b7280" fontSize={11} domain={['dataMin - 5', 'dataMax + 5']} />
+                  <Tooltip contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: '8px' }} />
+                  <Line type="monotone" dataKey="weight" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} name="Weight (kg)" />
+                  <Line type="monotone" dataKey="e1rm" stroke="#3b82f6" strokeWidth={2} strokeDasharray="3 3" dot={{ r: 2 }} name="Est. 1RM" />
+                </LineChart>
+              </ResponsiveContainer>
+            </>
+          )}
         </div>
       )}
 
@@ -1065,8 +1186,16 @@ function AttendanceTab({ clientId, coachId }) {
   }
 
   async function markDay(date, status) {
-    // Check if record exists already
-    const { data: existing } = await supabase
+    // Optimistic UI update
+    const existing = records.find(r => r.date === date)
+    if (existing) {
+      setRecords(records.map(r => r.date === date ? { ...r, status } : r))
+    } else {
+      setRecords([{ id: 'temp-' + date, date, status, coach_id: coachId, client_id: clientId }, ...records])
+    }
+
+    // Check if record exists already in DB
+    const { data: dbExisting, error: selErr } = await supabase
       .from('attendance')
       .select('id')
       .eq('coach_id', coachId)
@@ -1074,15 +1203,27 @@ function AttendanceTab({ clientId, coachId }) {
       .eq('date', date)
       .maybeSingle()
 
-    if (existing) {
-      await supabase.from('attendance').update({ status }).eq('id', existing.id)
+    if (selErr) {
+      console.error('attendance select error:', selErr)
+      alert('Error checking attendance: ' + selErr.message)
+      return
+    }
+
+    let result
+    if (dbExisting) {
+      result = await supabase.from('attendance').update({ status }).eq('id', dbExisting.id)
     } else {
-      await supabase.from('attendance').insert({
+      result = await supabase.from('attendance').insert({
         coach_id: coachId,
         client_id: clientId,
         date,
         status,
       })
+    }
+
+    if (result.error) {
+      console.error('attendance save error:', result.error)
+      alert('Error saving attendance: ' + result.error.message)
     }
     loadAttendance()
   }
